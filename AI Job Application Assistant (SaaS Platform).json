@@ -1,0 +1,407 @@
+{
+  "name": "AI Job Application Assistant (SaaS Platform)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "100ac8e7-dfb4-4a66-8ad9-76a9d10cd147",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -64
+      ],
+      "id": "68e67fd1-e1a1-4960-bf28-b59b9b7ac9c3",
+      "name": "Webhook",
+      "webhookId": "100ac8e7-dfb4-4a66-8ad9-76a9d10cd147"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "resume",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        -64
+      ],
+      "id": "880eb8dd-75a8-4753-b741-5fcdb245c995",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert HR recruiter, ATS resume writer, and career consultant.\n\nYou will receive a candidate's resume and a job description.\n\nCandidate Name:\n{{ $('Webhook').item.json.body.fullName }}\n\nResume:\n{{ $json.text }}\n\nJob Description:\n{{ $('Webhook').item.json.body.jobDescription }}\n\nInstructions:\n- Analyze both the resume and the job description carefully.\n- Never invent skills, experience, education, certifications, or achievements that are not present in the resume.\n- Tailor the cover letter specifically to the job description.\n- Write a professional, human-like cover letter.\n- Create a concise ATS-friendly resume summary based only on the resume.\n- Use clear, professional English.\n\nReturn ONLY in the following format exactly:\n\n===COVER_LETTER===\n<cover letter>\n\n===RESUME_SUMMARY===\n<resume summary>\n\nDo not include any other text, explanations, markdown, headings, or code blocks.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        448,
+        -64
+      ],
+      "id": "65669ba6-65fe-4ac5-a806-168c88d21bbb",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        160
+      ],
+      "id": "d1a55029-0de7-4800-8047-5ab9ca207ed4",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "HxU9Wq5zIVyxXcjS",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const output = $json.text;\n\nconst coverLetter = output\n  .split(\"===RESUME_SUMMARY===\")[0]\n  .replace(\"===COVER_LETTER===\", \"\")\n  .trim();\n\nconst resumeSummary = output\n  .split(\"===RESUME_SUMMARY===\")[1]\n  .trim();\n\nreturn {\n  coverLetter,\n  resumeSummary,\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -64
+      ],
+      "id": "f55a43ed-8ad9-44c1-b221-852e90660465",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "html": "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<style>\nbody{\n    font-family: Arial, sans-serif;\n    margin:50px;\n    line-height:1.8;\n    color:#333;\n}\nh1{\n    text-align:center;\n    color:#1E88E5;\n}\n.content{\n    white-space: pre-wrap;\n}\n</style>\n</head>\n<body>\n\n<h1>Cover Letter</h1>\n\n<div class=\"content\">\n{{ $json.coverLetter }}\n</div>\n\n</body>\n</html>"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        -160
+      ],
+      "id": "1486e302-a9e4-4fbf-827c-1cf758fa57ea",
+      "name": "Cover Letter HTML"
+    },
+    {
+      "parameters": {
+        "html": "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<style>\nbody{\n    font-family: Arial, sans-serif;\n    margin:50px;\n    line-height:1.8;\n    color:#333;\n}\nh1{\n    text-align:center;\n    color:#1E88E5;\n}\n.content{\n    white-space: pre-wrap;\n}\n</style>\n</head>\n<body>\n\n<h1>Professional Resume Summary</h1>\n\n<div class=\"content\">\n{{ $json.resumeSummary }}\n</div>\n\n</body>\n</html>"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        32
+      ],
+      "id": "4e892a2f-a169-4b99-a94a-f71e9c44d64f",
+      "name": "Resume Summary HTML"
+    },
+    {
+      "parameters": {
+        "html_content": "={{ $json.html }}",
+        "output_format": "file",
+        "output_filename": "cover_letter"
+      },
+      "id": "fdcf3955-58f6-45b4-bfad-0f397e4cd215",
+      "name": "Cover Letter PDF",
+      "type": "n8n-nodes-htmlcsstopdf.htmlcsstopdf",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        -160
+      ],
+      "credentials": {
+        "htmlcsstopdfApi": {
+          "id": "0VtfCfit7Hrl5qBE",
+          "name": "HTML to PDF account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "html_content": "={{ $json.html }}",
+        "output_format": "file",
+        "output_filename": "resume_summary"
+      },
+      "id": "92950737-1955-4fd1-8690-9c74efef30eb",
+      "name": "Resume Summary PDF",
+      "type": "n8n-nodes-htmlcsstopdf.htmlcsstopdf",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        32
+      ],
+      "credentials": {
+        "htmlcsstopdfApi": {
+          "id": "0VtfCfit7Hrl5qBE",
+          "name": "HTML to PDF account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "coverLetterPdf",
+              "type": "binary",
+              "value": "={{ $binary.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "df655dd3-9a30-452a-8f83-90465590d931",
+      "name": "Set Cover Letter Binary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1472,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2",
+              "name": "resumePdf",
+              "type": "binary",
+              "value": "={{ $binary.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f30c29ed-df5f-4e74-933b-1f4b5e80ae22",
+      "name": "Set Resume Binary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1472,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "26b406aa-ea28-4b00-99ed-0fbda5737a3d",
+      "name": "Merge PDFs",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1696,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.email }}",
+        "subject": "Your AI-Generated Cover Letter & Resume Summary",
+        "message": "=<p>Hi {{ $('Webhook').item.json.body.fullName }},</p><p>Please find attached your AI-generated cover letter and resume summary.</p><p>Best of luck with your application!</p>",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "coverLetterPdf,resumePdf"
+              }
+            ]
+          }
+        }
+      },
+      "id": "cd15967d-3452-49a9-9e06-bcacdb040087",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        -64
+      ],
+      "webhookId": "19237769-d981-45a1-ba8e-09a743ceb602",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ou4fZFoAlF3M75Gq",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Cover Letter HTML",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Resume Summary HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cover Letter HTML": {
+      "main": [
+        [
+          {
+            "node": "Cover Letter PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Summary HTML": {
+      "main": [
+        [
+          {
+            "node": "Resume Summary PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cover Letter PDF": {
+      "main": [
+        [
+          {
+            "node": "Set Cover Letter Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Cover Letter Binary": {
+      "main": [
+        [
+          {
+            "node": "Merge PDFs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Summary PDF": {
+      "main": [
+        [
+          {
+            "node": "Set Resume Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Resume Binary": {
+      "main": [
+        [
+          {
+            "node": "Merge PDFs",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge PDFs": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "1e36f43f-0755-486c-bd7e-5be6d80e0fdd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "1fcb314b799ffaa139d523712da1d3e4ee099c34101171b2c01e11813ce27535"
+  },
+  "nodeGroups": [],
+  "id": "LQlRoMfuacco2Z50",
+  "tags": []
+}
